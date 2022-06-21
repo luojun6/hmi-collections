@@ -1,0 +1,100 @@
+title HMI - Adaptive Control Control
+
+actor User
+boundary "CAN Bus Interface" as can_interface
+boundary "IC HMI" as ic_hmi
+boundary "HU HMI" as hu_hmi
+
+// HU - Head Unit 
+// IC - Instrument Cluster
+
+control "HU Control" as hu_control
+control "IC Control" as ic_control
+
+fontawesome f0e4 "ACC Status Indicator" as acc_sts_indicator #DodgerBlue
+fontawesome f06a "ACC Error Indicator" as acc_error_indicator #GoldenRod
+fontawesome f1b9 "IC Canvas Car" as ic_canvas_car #steelblue
+
+activate ic_canvas_car #Silver
+
+group #Aqua F01 Indicating ACC System Status
+
+note over can_interface, ic_canvas_car#BlanchedAlmond: ACCSysSts: 0x00->off, 0x01->standby, 0x02->active, 0x03->override, 0x04->brake_only, 0x05->stand_still_active, 0x06->stand_still_wait
+
+alt #CornflowerBlue ACC is OFF
+
+note over can_interface, ic_canvas_car#BlanchedAlmond: ACC Status Indicator is **invisible** while ACC System is OFF 
+
+can_interface->ic_control: ACCSysSts == 0x0 off
+ic_control->acc_sts_indicator: set_acc_sts_indicator(OFF)
+
+else ACC is active but unavailable
+
+note over can_interface, ic_canvas_car#BlanchedAlmond: ACC Status Indicator is **gray** while ACC System is active but fully activation conditions are not all satisfied 
+
+can_interface->ic_control: (ACCSysSts == 0x7 passive) or ((ACCSysSts != 0x0 off) and (ADASAvlbly == 0x0 false))
+
+ic_control->acc_sts_indicator: set_acc_sts_indicator(UNAVAILABLE)
+activate acc_sts_indicator #gray
+
+acc_sts_indicator->ic_hmi: update()
+
+else ACC is standby
+
+note over can_interface, ic_canvas_car#BlanchedAlmond: ACC Status Indicator is **white** while ACC System is in stanby state 
+
+can_interface->ic_control: ACCSysSts == 0x1 standby
+ic_control->acc_sts_indicator: set_acc_sts_indicator(STANDBY)
+deactivate acc_sts_indicator
+activate acc_sts_indicator #white
+
+acc_sts_indicator->ic_hmi: update()
+
+else ACC is running
+
+note over can_interface, ic_canvas_car#BlanchedAlmond: ACC Status Indicator is **blue** while ACC System is in running states. 
+
+par #ForestGreen ACC is running
+can_interface->ic_control: ACCSysSts == 0x2 active
+ic_control->acc_sts_indicator: set_acc_sts_indicator(RUNNING)
+deactivate acc_sts_indicator
+activate acc_sts_indicator #RoyalBlue
+
+acc_sts_indicator->ic_hmi: update()
+
+thread 
+can_interface->ic_control: ACCSysSts == 0x3 override
+thread 
+can_interface->ic_control: ACCSysSts == 0x4 brake_only
+thread 
+can_interface->ic_control: ACCSysSts == 0x5 stand_still_active
+thread 
+can_interface->ic_control: ACCSysSts == 0x6 stand_still_wait
+
+
+end
+
+// alt-F01
+end
+
+// gourp-F01
+end 
+
+space 
+
+group #Aqua F02 Indicating ACC Errors
+ref over can_interface, ic_canvas_car#BlanchedAlmond:ACCSysSts > 0x1, ACCSysFltSts == 0x0, ADASAvlbly == 0x1
+
+alt #CornflowerBlue No error
+note over can_interface, ic_canvas_car#BlanchedAlmond: ACC system has no error error indicator is invisible.
+
+else ADAS node unavailable
+note over can_interface, ic_canvas_car#BlanchedAlmond: Lost ADAS node in CAN bus.
+can_interface->ic_control: LOST_ADAS_NODE_EVENT
+
+// alt-F02
+end
+
+
+// gourp-F02
+end 
