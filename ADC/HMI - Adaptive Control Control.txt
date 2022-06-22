@@ -1,6 +1,6 @@
 title HMI - Adaptive Control Control
 
-actor User
+actor user
 boundary "CAN Bus Interface" as can_interface
 boundary "IC HMI" as ic_hmi
 boundary "HU HMI" as hu_hmi
