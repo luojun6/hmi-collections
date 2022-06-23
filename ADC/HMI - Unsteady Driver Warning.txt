@@ -17,6 +17,8 @@ fontawesome f150 "UDW Sensitivity \nSelector" as hu_udw_sensitivity_selector #Do
 
 fontawesome f071 "UDW Error \nIndicator" as ic_udw_error_indicator #GoldenRod
 
+fontawesome f1b9 "IC Canvas Car" as ic_canvas_car #steelblue
+
 
 group #Aqua F01 UWD Enabler for User Request
 
@@ -24,10 +26,10 @@ note over can_interface, ic_canvas_car#BlanchedAlmond: UDWSwReq: 0x0->no request
 
 
 ==F05 UDW Enabler Button Status: UDWDspCmd==0x2(on)==#Gold
-hu_udw_enabler->hu_udw_enabler: init(ON) 
+hu_udw_enabler->hu_udw_enabler: init() 
 activate hu_udw_enabler #DodgerBlue
 activate hu_udw_sensitivity_selector #DodgerBlue
-hu_udw_enabler->hu_hmi: render(UDW_ENABLER_ON)
+hu_udw_enabler->hu_hmi:render()
 
 space 
 
@@ -199,7 +201,6 @@ group #Aqua F07 UWD Warning
 
 # F07 UWD Warning
 end
-
 
 
 

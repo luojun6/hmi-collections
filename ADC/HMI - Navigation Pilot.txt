@@ -1,0 +1,86 @@
+title This is a title
+
+title HMI - Navigation Pilot
+
+actor user
+boundary "CAN Bus Interface" as can_interface
+boundary "IC HMI" as ic_hmi
+boundary "HU HMI" as hu_hmi
+
+// HU - Head Unit 
+// IC - Instrument Cluster
+
+control "HU Control" as hu_control
+control "IC Control" as ic_control
+
+fontawesome f205 "NGP Enabler" as hu_ngp_enabler #DodgerBlue
+
+fontawesome f1b9 "IC Canvas Car" as ic_canvas_car #steelblue
+
+group #Aqua F01-1 Enable/Disable NGP
+
+note over can_interface, ic_canvas_car#BlanchedAlmond: ACCTJAMdSwReq: 0x0->no request, 0x1->ACC, 0x2->TJA, 0x3->SHWA, 0x4->off, 0x5->NOP, 0x6~0x7->reserved
+
+==Assume ACCTJAMdSwDspCmd != 0x5 (Not Working in NOP State)==#Gold
+
+activate hu_ngp_enabler
+
+user->hu_hmi: press_button(NGP_ENABLER, ON) 
+hu_hmi->hu_control: user_req_enable_ngp()
+hu_control->hu_ngp_enabler: async set()
+deactivate hu_ngp_enabler
+activate hu_ngp_enabler #DodgerBlue
+
+alt#CornflowerBlue Received ADAS confirmation before timer expired
+
+can_interface->hu_control: ACCTJAMdSwDspCmd == 0x5 
+
+else Not received ADAS confirmation before timer expired
+hu_control->hu_control: user_interaction_timer_expired()
+hu_control->hu_ngp_enabler: async reset()
+deactivate hu_ngp_enabler
+activate hu_ngp_enabler 
+
+end 
+
+space 
+
+deactivate hu_ngp_enabler
+==Assume ACCTJAMdSwDspCmd == 0x5 (NOP)==#Gold
+activate hu_ngp_enabler #DodgerBlue
+
+user->hu_hmi: press_button(NGP_ENABLER, OFF) 
+hu_hmi->user: prompt()
+
+alt#CornflowerBlue user cancelled
+
+user-->hu_hmi: prompt() : cancel 
+
+else user confirmed
+
+user-->hu_hmi: prompt() : confirm
+hu_hmi->hu_control: user_req_disable_ngp()
+hu_control->hu_ngp_enabler: async reset()
+deactivate hu_ngp_enabler
+activate hu_ngp_enabler
+hu_control->can_interface: AutoLaneChngSwReq != 0x5(Not equals to NOP)
+end
+
+alt#CornflowerBlue Received ADAS confirmation before timer expired
+
+can_interface->hu_control: ACCTJAMdSwDspCmd == 0x5 
+
+else Not received ADAS confirmation before timer expired
+hu_control->hu_control: user_interaction_timer_expired()
+hu_control->hu_ngp_enabler: async set()
+deactivate hu_ngp_enabler
+activate hu_ngp_enabler #DodgerBlue
+
+end 
+
+space 
+
+deactivate hu_ngp_enabler
+
+#F01-1 Enable/Disable NGP
+end 
