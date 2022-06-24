@@ -1,5 +1,3 @@
-title This is a title
-
 title HMI - Navigation Pilot
 
 actor user
@@ -13,7 +11,9 @@ boundary "HU HMI" as hu_hmi
 control "HU Control" as hu_control
 control "IC Control" as ic_control
 
-fontawesome f205 "NGP Enabler" as hu_ngp_enabler #DodgerBlue
+fontawesome f205 "NGP \nEnabler" as hu_ngp_enabler #DodgerBlue
+
+fontawesome f205 "LaneChangeConfirm \nSelector" as hu_lcc_selector #DodgerBlue
 
 fontawesome f1b9 "IC Canvas Car" as ic_canvas_car #steelblue
 
@@ -25,11 +25,20 @@ note over can_interface, ic_canvas_car#BlanchedAlmond: ACCTJAMdSwReq: 0x0->no re
 
 activate hu_ngp_enabler
 
+
 user->hu_hmi: press_button(NGP_ENABLER, ON) 
 hu_hmi->hu_control: user_req_enable_ngp()
+hu_control->can_interface: ACCTJAMdSwReq = 0x5 
+
+linear
 hu_control->hu_ngp_enabler: async set()
+hu_ngp_enabler->hu_lcc_selector: eanble()
+linear off
+
+activate hu_lcc_selector
 deactivate hu_ngp_enabler
 activate hu_ngp_enabler #DodgerBlue
+
 
 alt#CornflowerBlue Received ADAS confirmation before timer expired
 
@@ -37,7 +46,11 @@ can_interface->hu_control: ACCTJAMdSwDspCmd == 0x5
 
 else Not received ADAS confirmation before timer expired
 hu_control->hu_control: user_interaction_timer_expired()
+linear 
 hu_control->hu_ngp_enabler: async reset()
+hu_ngp_enabler->hu_lcc_selector: disable()
+linear  off
+deactivate hu_lcc_selector
 deactivate hu_ngp_enabler
 activate hu_ngp_enabler 
 
@@ -48,6 +61,7 @@ space
 deactivate hu_ngp_enabler
 ==Assume ACCTJAMdSwDspCmd == 0x5 (NOP)==#Gold
 activate hu_ngp_enabler #DodgerBlue
+activate hu_lcc_selector
 
 user->hu_hmi: press_button(NGP_ENABLER, OFF) 
 hu_hmi->user: prompt()
@@ -60,27 +74,145 @@ else user confirmed
 
 user-->hu_hmi: prompt() : confirm
 hu_hmi->hu_control: user_req_disable_ngp()
+hu_control->can_interface: AutoLaneChngSwReq != 0x5(Not equals to NOP)
+linear 
 hu_control->hu_ngp_enabler: async reset()
+hu_ngp_enabler->hu_lcc_selector: disable()
+linear off
+deactivate hu_lcc_selector
 deactivate hu_ngp_enabler
 activate hu_ngp_enabler
-hu_control->can_interface: AutoLaneChngSwReq != 0x5(Not equals to NOP)
+
 end
 
 alt#CornflowerBlue Received ADAS confirmation before timer expired
 
-can_interface->hu_control: ACCTJAMdSwDspCmd == 0x5 
+can_interface->hu_control: ACCTJAMdSwDspCmd != 0x5 
 
 else Not received ADAS confirmation before timer expired
 hu_control->hu_control: user_interaction_timer_expired()
+linear 
 hu_control->hu_ngp_enabler: async set()
+hu_ngp_enabler->hu_lcc_selector: enable()
+linear off
 deactivate hu_ngp_enabler
 activate hu_ngp_enabler #DodgerBlue
+activate hu_lcc_selector
 
 end 
 
 space 
 
-deactivate hu_ngp_enabler
 
 #F01-1 Enable/Disable NGP
 end 
+
+space 
+
+
+group #Aqua F01-2 Select Lane Change Confirmation 
+
+note over can_interface, ic_canvas_car#BlanchedAlmond: NOPSwReq: 0x0->no request, 0x1->off, 0x2->NOP_NdConfirm, 0x3->NOP_NotNdConfirm, 0x4~0x7->reserved
+
+user->hu_hmi: press_button(LANE_CHANGE_CONFIRM, SELECTED)
+
+hu_hmi->hu_control: user_req_lcc_confirm_selected()
+hu_control->can_interface: NOPSwReq = 0x2
+hu_control->hu_lcc_selector: async select()
+deactivate hu_lcc_selector
+activate hu_lcc_selector #DodgerBlue
+
+alt#CornflowerBlue Received ADAS confirmation before timer expired
+
+can_interface->hu_control: NOPSwDspCmd == 0x2 
+
+else Not received ADAS confirmation before timer expired
+hu_control->hu_control: user_interaction_timer_expired()
+ 
+hu_control->hu_lcc_selector: async unselect()
+
+deactivate hu_lcc_selector
+activate hu_lcc_selector
+
+end 
+
+==Assume NOPSwDspCmd == 0x2==#Gold
+deactivate hu_lcc_selector
+activate hu_lcc_selector #DodgerBlue
+
+user->hu_hmi: press_button(LANE_CHANGE_CONFIRM, UNSELECTED)
+
+hu_hmi->hu_control: user_req_lcc_confirm_unselected()
+hu_control->can_interface: NOPSwReq = 0x3
+hu_control->hu_lcc_selector: async select()
+deactivate hu_lcc_selector
+activate hu_lcc_selector 
+
+alt#CornflowerBlue Received ADAS confirmation before timer expired
+
+can_interface->hu_control: NOPSwDspCmd == 0x3 
+
+else Not received ADAS confirmation before timer expired
+hu_control->hu_control: user_interaction_timer_expired()
+ 
+hu_control->hu_lcc_selector: async unselect()
+
+deactivate hu_lcc_selector
+activate hu_lcc_selector #DodgerBlue
+
+end 
+
+space 
+
+group #Aqua F01-3 Select Reminder Mode 
+
+# F01-3 Select Reminder Mode 
+end
+
+group #Aqua F01-4 Fast Switch ICA and NGP 
+
+# F01-3 Select Reminder Mode 
+end
+
+
+# F01-2 Select Lane Change Reminder
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
